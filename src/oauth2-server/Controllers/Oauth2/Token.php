@@ -1,6 +1,6 @@
 <?php
 
-namespace Vuba\OIDC\Controller;
+namespace Vuba\OIDC\Controllers\Oauth2;
 
 use Silex\Application;
 

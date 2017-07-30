@@ -1,8 +1,8 @@
 <?php
 
-namespace Vuba\OIDC\Controller;
+namespace Vuba\OIDC\Controllers\Oauth2;
 
-use Silex\ControllerProviderInterface;
+use Silex\Api\ControllerProviderInterface;
 use Silex\Application;
 use OAuth2\HttpFoundationBridge\Response as BridgeResponse;
 use OAuth2\Server as OAuth2Server;
@@ -16,12 +16,15 @@ class Oauth2Controller implements  ControllerProviderInterface
 {
     public function setup(Application $app){
         // ensure our Sqlite database exists
+
+        /*
         if (!file_exists($sqliteFile = __DIR__.'/../../../data/oauth.sqlite')) {
             $this->generateSqliteDb();
         }
 
         // create PDO-based sqlite storage
         $storage = new Pdo(array('dsn' => 'sqlite:'.$sqliteFile));
+
 
         // create array of supported grant types
         $grantTypes = array(
@@ -44,7 +47,7 @@ class Oauth2Controller implements  ControllerProviderInterface
 
         // add the server to the silex "container" so we can use it in our controllers (see src/OAuth2Demo/Server/Controllers/.*)
         $app['oauth_server'] = $server;
-
+*/
         /**
          * add HttpFoundataionBridge Response to the container, which returns a silex-compatible response object
          * @see (https://github.com/bshaffer/oauth2-server-httpfoundation-bridge)
