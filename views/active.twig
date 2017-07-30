@@ -1,0 +1,14 @@
+{% extends "base.twig" %}
+
+{% block content %}
+    <div>
+        {% if activationResult %}
+            Congratulation, Your account is active. Please enter new password
+        {% else %}
+            <form action="#" method="post" class="form-signin">
+                <h2 class="form-signin-heading">Please enter email address or telephone number</h2>
+                {{ form_widget(form) }}
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}

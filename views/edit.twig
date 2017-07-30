@@ -1,0 +1,12 @@
+{% extends "base.twig" %}
+
+{% block content %}
+
+
+
+    <form action="#" method="post" class="form-signin">
+        <h2 class="form-signin-heading">Hi, {{ loggedUser }} do you want to modify personal info ?</h2>
+        {{ form_widget(form) }}
+    </form>
+
+{% endblock %}

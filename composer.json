@@ -2,14 +2,21 @@
   "require": {
     "silex/silex": "2.2.*",
     "symfony/twig-bridge": "^2.",
+    "symfony/translation": "^2.",
+    "monolog/monolog": "^1.",
+    "symfony/validator": "^2.",
+    "symfony/asset": "^2.",
+    "symfony/config": "^2.",
+    "symfony/security": "^2.",
+    "symfony/form": "^2.",
     "vuba/oauth2-server-php": "dev-master",
     "bshaffer/oauth2-server-httpfoundation-bridge": "v1.1",
     "guzzlehttp/guzzle": "~3.7",
     "vuba/auth-n" : "dev-master"
   },
   "autoload" : {
-    "psr-0": {
-      "OAuth2Demo": "src/"
+    "psr-4": {
+      "Vuba\\OIDC\\Controllers\\": "src/oauth2-server/Controllers"
     }
   },
   "minimum-stability": "dev"
