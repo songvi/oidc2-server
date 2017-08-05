@@ -13,6 +13,8 @@ use Symfony\Component\Asset\VersionStrategy;
 use Silex\Provider\CsrfServiceProvider;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Vuba\AuthN\AuthN;
+use Vuba\AuthN\Service\ConfServiceYaml;
 
 require_once 'Account.php';
 
@@ -60,12 +62,17 @@ class AccountController implements ControllerProviderInterface
         ));
 
         $app['asset_root'] = 'http://static.dev.php';
+
         // setup vuba\ auth-n  object
 
 
         $request = Request::createFromGlobals();
         $app['request'] = $request;
         $app['response'] = new Response();
+
+        $config = new ConfServiceYaml(__DIR__.'/../../../../config/config.yml');
+        $authn = new AuthN($config);
+        $app['vuba.authn'] = $authn;
 
     }
     public function connect(Application $app){
