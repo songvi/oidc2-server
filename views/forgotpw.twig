@@ -1,6 +1,27 @@
 {% extends "base.twig" %}
 
 {% block content %}
-    Hi, You've lost password ? Enter your email / tel number for pw recovery
 
+<div class="row justify-content-center">
+    <div class="col-sm-5">
+        <div class="form-box">
+            <div class="form-top">
+                <div class="form-top-left">
+                    <h3>{{ form_name }}</h3>
+
+                    <p>{{ action_message }}</p>
+                </div>
+                <div class="form-top-right">
+                    <i class="fa fa-key"></i>
+                </div>
+            </div>
+            <div class="form-bottom">
+                <form role="form" action="" method="post" class="login-form">
+                    {{ form_widget(form) }}
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
 {% endblock %}
+

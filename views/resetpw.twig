@@ -1,0 +1,17 @@
+{% extends "base.twig" %}
+
+{% block content %}
+    <div>
+        {% if resetResult %}
+            You've changed password successfully.
+        {% else %}
+            {% if resetCount < 5 %}
+                Error, please try again
+            {% endif %}
+            <form action="#" method="post" class="form-signin">
+                <h2 class="form-signin-heading">You are about changing the password</h2>
+                {{ form_widget(form) }}
+            </form>
+        {% endif %}
+    </div>
+{% endblock %}
