@@ -17,6 +17,7 @@ use Vuba\AuthN\User\UserObject;
 
 class Account
 {
+    const REGISTER_MESSAGE = "Sign up for free";
     // Connects the routes in Silex
     public static function addRoutes($routing)
     {
@@ -43,17 +44,25 @@ class Account
         // TODO return server info
         // Return account page
         $action_message = "hi, this is form message";
+        $register_message = "";
+        $register_name = "Sign up for free";
         $session = $app['session'];
         if(!empty($session->get('loggedUser'))){
             return $app['twig']->render('welcome.twig', array(
                 'action_message' => "",
+                'register_name' => $register_name,
+                'register_message' => $register_message,
                 'loggedUser' => $app['session']->get('loggedUser')));
         }
 
         return $app['twig']->render('index.twig', array(
             'form_name' => 'Login to my site',
             'action_message' => $action_message,
-            'form' => $this->renderLoginForm($app)->createView()));
+            'register_name' => $register_name,
+            'register_message' => $register_message,
+            'form' => $this->renderLoginForm($app)->createView(),
+            'form_register' => $this->renderRegister($app)->createView()
+        ));
     }
     public function login_post(Application $app){
 
@@ -227,15 +236,21 @@ class Account
             }
         }
 
+        $action_message = "";
+        $register_name = "Sign up for free";
+        $register_message = "";
         if (!$registerResult) {
             $message = "The registration is failed, ";
         }
-        return $app['twig']->render('register.twig', array(
-            'registerResult' => $registerResult,
-            'activationCount' => 4,
-            'message' => "",
-            'action_message' => "",
-            'form' => $this->renderRegister($app)->createView()
+
+
+        return $app['twig']->render('index.twig', array(
+            'form_name' => 'Login to my site',
+            'action_message' => $action_message,
+            'register_name' => $register_name,
+            'register_message' => $register_message,
+            'form' => $this->renderLoginForm($app)->createView(),
+            'form_register' => $this->renderRegister($app)->createView()
         ));
     }
     public function register_get(Application $app){
