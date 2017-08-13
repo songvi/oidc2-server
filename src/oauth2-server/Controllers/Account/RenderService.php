@@ -47,6 +47,13 @@ class RenderService{
         ));
     }
 
+    public static function renderForm($app, $form, $formDisplayName, $message, $twigFileName){
+        return $app['twig']->render($twigFileName, array(
+            'form_name' => $formDisplayName,
+            'action_message' => $message,
+            'form' => $form->createView(),
+        ));
+    }
     public static function loginForm($app){
         return $app['form.factory']->createBuilder(FormType::class)
             ->add('ematel', TextType::class, array(

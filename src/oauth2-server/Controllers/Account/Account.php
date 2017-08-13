@@ -123,7 +123,7 @@ class Account
                 $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
                 $form = RenderService::editForm($app);
                 $this->fillForm($form, $userData);
-                return RenderService::render($app, 'edit', 'Modify your personal info', 'Action done!', 'edit.twig');
+                return RenderService::renderForm($app, $form, 'Modify your personal info', 'Action done!', 'edit.twig');
             }
 
         }
@@ -133,20 +133,28 @@ class Account
             $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
             $form = RenderService::editForm($app);
             $this->fillForm($form, $userData);
-            return RenderService::render($app, 'edit', 'Modify your personal info', 'Action failed, please try again!', 'edit.twig');
+            return RenderService::renderForm($app, $form, 'Modify your personal info', 'Action failed, please try again!', 'edit.twig');
         }
     }
 
-    private function fillForm(&$form, $userData){
+    private function fillForm($form, $userData){
         if (!empty($userData) && $userData instanceof UserObject){
-            empty($form->get('Name'))?$form->get('Name')->setData($userData->getName()): "";
-            empty($form->get('FamilyName'))?$form->get('FamilyName')->setData($userData->getFamilyName()): "";
-            empty($form->get('Avantar'))?$form->get('Avantar')->setData($userData->getProfile()): "";
-            empty($form->get('Theme'))?$form->get('Theme')->setData($userData->getPreferredTheme()): "";
-            empty($form->get('BirthDate'))?$form->get('BirthDate')->setData($userData->getBirthdate()->format('d/m/Y')): "";
-            empty($form->get('Address'))?$form->get('Address')->setData($userData->getAddress()): "";
-            empty($form->get('Language'))?$form->get('Language')->setData($userData->getPreferredLang()): "";
-            empty($form->get('Locale'))?$form->get('Locale')->setData($userData->getLocale()): "";
+            if (!empty($userData->getName()))
+                $form->get('Name')->setData($userData->getName());
+            if (!empty($userData->getFamilyName()))
+                $form->get('FamilyName')->setData($userData->getFamilyName());
+            if (!empty($userData->getProfile()))
+                $form->get('Avantar')->setData($userData->getProfile());
+            if (!empty($userData->getPreferredTheme()))
+                $form->get('Theme')->setData($userData->getPreferredTheme());
+            if (!empty($userData->getBirthdate()->format('d/m/Y')))
+                $form->get('BirthDate')->setData($userData->getBirthdate()->format('d/m/Y'));
+            if (!empty($userData->getAddress()))
+                $form->get('Address')->setData($userData->getAddress());
+            if (!empty($userData->getPreferredLang()))
+                $form->get('Language')->setData($userData->getPreferredLang());
+            if (!empty($userData->getLocale()))
+                $form->get('Locale')->setData($userData->getLocale());
         }
     }
 
@@ -156,7 +164,7 @@ class Account
             $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
             $form =RenderService::editForm($app);
             $this->fillForm($form, $userData);
-            return RenderService::render($app, 'edit', 'Modify your personal info', '', 'edit.twig');
+            return RenderService::renderForm($app, $form, 'Modify your personal info', '', 'edit.twig');
         }
         $returnUrl = $app['url_generator']->generate('login_get');
         return $app->redirect($returnUrl);
