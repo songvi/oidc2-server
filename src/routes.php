@@ -1,7 +1,5 @@
 <?php
 
-//require_once __DIR__.'/oauth2-server/Controllers/Account/AccountController.php';
-
 use Vuba\OIDC\Controllers\Account\AccountController;
 use Vuba\OIDC\Controllers\Oauth2\Oauth2Controller;
 use Symfony\Component\HttpFoundation\Request;
