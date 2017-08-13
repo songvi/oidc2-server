@@ -5,6 +5,7 @@ namespace Vuba\OIDC\Controllers\Account;
 use Silex\Application;
 use Silex\Controller;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Security\Core\User\User;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\FormType;
@@ -44,24 +45,17 @@ class Account
         // TODO return server info
         // Return account page
         $action_message = "hi, this is form message";
-        $register_message = "";
-        $register_name = "Sign up for free";
         $session = $app['session'];
         if(!empty($session->get('loggedUser'))){
             return $app['twig']->render('welcome.twig', array(
                 'action_message' => "",
-                'register_name' => $register_name,
-                'register_message' => $register_message,
                 'loggedUser' => $app['session']->get('loggedUser')));
         }
 
         return $app['twig']->render('index.twig', array(
             'form_name' => 'Login to my site',
             'action_message' => $action_message,
-            'register_name' => $register_name,
-            'register_message' => $register_message,
             'form' => $this->renderLoginForm($app)->createView(),
-            'form_register' => $this->renderRegister($app)->createView()
         ));
     }
     public function login_post(Application $app){
@@ -117,7 +111,7 @@ class Account
                 ),
                 'attr' => array(
                     'class' => 'form-control form-username oidc-form',
-                    'placeholder'=> 'Email address',
+                    'placeholder'=> 'Email or telephone ...',
                     'required' => true,
                     'autofocus' => true,
                 )
@@ -159,15 +153,80 @@ class Account
      * @param Application $app
      */
     public function edit_post(Application $app){
+        $session = $app['session'];
+        // if user has not logged in
+        if (empty($session->get('loggedUser'))){
+            return $app->redirect($app['url_generator']->generate('login_get'));
+        }
 
+        $form = $this->renderEdit($app);
+        $form->handleRequest($app['request']);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $postedData = $form->getData();
+
+            $kv = array();
+            $kv['name'] = $postedData['Name'];
+            $kv['family_name'] = $postedData['FamilyName'];
+            $kv['profile'] = $postedData['Avantar'];
+            $kv['preferred_theme'] = $postedData['Theme'];
+            $kv['birthdate'] = \DateTime::createFromFormat('d/m/Y', $postedData['BirthDate']);
+            $kv['address'] = $postedData['Address'];
+            $kv['preferred_lang'] = $postedData['Language'];
+            $kv['locale'] = $postedData['Locale'];
+
+            $result = $app['vuba.authn']->modify($session->get('loggedUser'), $kv);
+
+            if($result){
+                $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
+                $form = $this->renderEdit($app);
+                $this->fillForm($form, $userData);
+
+                return $app['twig']->render('edit.twig', array(
+                    'form_name' => 'Modify your personal infos',
+                    'action_message' => "Action done!",
+                    'form' => $form->createView()
+                ));
+            }
+
+        }
+
+        $session = $app['session'];
+        if($session->get('loggedUser')) {
+            $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
+            $form = $this->renderEdit($app);
+            $this->fillForm($form, $userData);
+            return $app['twig']->render('edit.twig', array(
+                'form_name' => 'Modify your personal infos',
+                'action_message' => "Action failed, please try again!",
+                'form' => $form->createView()
+            ));
+        }
     }
+
+    private function fillForm(&$form, $userData){
+        if (!empty($userData) && $userData instanceof UserObject){
+            $form->get('Name')->setData($userData->getName());
+            $form->get('FamilyName')->setData($userData->getFamilyName());
+            $form->get('Avantar')->setData($userData->getProfile());
+            $form->get('Theme')->setData($userData->getPreferredTheme());
+            $form->get('BirthDate')->setData($userData->getBirthdate()->format('d/m/Y'));
+            $form->get('Address')->setData($userData->getAddress());
+            $form->get('Language')->setData($userData->getPreferredLang());
+            $form->get('Locale')->setData($userData->getLocale());
+        }
+    }
+
     public function edit_get(Application $app){
         $session = $app['session'];
         if($session->get('loggedUser')) {
+            $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
+            $form = $this->renderEdit($app);
+            $this->fillForm($form, $userData);
             return $app['twig']->render('edit.twig', array(
-                'loggedUser' => $session->get('loggedUser'),
+                'form_name' => 'Modify your personal infos',
                 'action_message' => "",
-                'form' => $this->renderEdit($app)->createView()
+                'form' => $form->createView()
                 ));
         }
         //$app['url_generator']->generate('my-route-name');
@@ -177,21 +236,88 @@ class Account
     }
     private function renderEdit(Application $app){
         return $app['form.factory']->createBuilder(FormType::class)
-            ->add('DisplayName', TextType::class, array(
-                'constraints' => new Assert\Email(),
+            ->add('Name', TextType::class, array(
+                'constraints' => new Assert\NotBlank(),
                 'label' => 'Display Name',
                 'label_attr' => array(
                     'class' => 'sr-only'
                 ),
                 'attr' => array(
                     'class' => 'form-control oidc-form',
-                    'placeholder'=> 'Display Name',
+                    'placeholder'=> 'Name',
                     'required' => true,
                     'autofocus' => true,
                 )
             ))
+            ->add('FamilyName', TextType::class, array(
+                'constraints' => new Assert\NotBlank(),
+                'label' => 'Display Name',
+                'label_attr' => array(
+                    'class' => 'sr-only'
+                ),
+                'attr' => array(
+                    'class' => 'form-control oidc-form',
+                    'placeholder'=> 'Family Name',
+                    'required' => true,
+                    'autofocus' => true,
+                )
+            ))
+            ->add('Avantar', TextType::class, array(
+                'constraints' => new Assert\NotBlank(),
+                'label' => 'Avantar',
+                'label_attr' => array(
+                    'class' => 'sr-only'
+                ),
+                'attr' => array(
+                    'class' => 'form-control oidc-form',
+                    'placeholder'=> 'Avantar',
+                    'required' => true,
+                    'autofocus' => true,
+                )
+            ))
+            ->add('Theme', TextType::class, array(
+                'constraints' => new Assert\NotBlank(),
+                'label' => 'Theme',
+                'label_attr' => array(
+                    'class' => 'sr-only'
+                ),
+                'attr' => array(
+                    'class' => 'form-control oidc-form',
+                    'placeholder'=> 'Prefered theme',
+                    'required' => true,
+                    'autofocus' => true,
+                )
+            ))
+
+            ->add('BirthDate', TextType::class, array(
+                //'constraints' => new Assert\Date(),
+                'label' => 'Date of birth',
+                'label_attr' => array(
+                    'class' => 'sr-only'
+                ),
+                'attr' => array(
+                    'class' => 'form-control oidc-form',
+                    'placeholder'=> 'Date of birth',
+                    'required' => true,
+                    'autofocus' => true,
+                )
+            ))
+            ->add('Address', TextType::class, array(
+                'constraints' => new Assert\NotBlank(),
+                'label' => 'Address',
+                'label_attr' => array(
+                    'class' => 'sr-only'
+                ),
+                'attr' => array(
+                    'class' => 'form-control oidc-form',
+                    'placeholder'=> 'Address',
+                    'required' => true,
+                    'autofocus' => true,
+                )
+            ))
+
             ->add('Language', TextType::class, array(
-                'constraints' => new Assert\Email(),
+                'constraints' => new Assert\NotBlank(),
                 'label' => 'Prefered language',
                 'label_attr' => array(
                     'class' => 'sr-only'
@@ -203,6 +329,20 @@ class Account
                     'autofocus' => true,
                 )
             ))
+            ->add('Locale', TextType::class, array(
+                'constraints' => new Assert\NotBlank(),
+                'label' => 'Locale',
+                'label_attr' => array(
+                    'class' => 'sr-only'
+                ),
+                'attr' => array(
+                    'class' => 'form-control oidc-form',
+                    'placeholder'=> 'Locale',
+                    'required' => true,
+                    'autofocus' => true,
+                )
+            ))
+
             ->add('save', SubmitType::class, [
                 'label' => 'Save',
                 'attr' => array(
@@ -235,29 +375,16 @@ class Account
                 }
             }
         }
-
-        $action_message = "";
-        $register_name = "Sign up for free";
-        $register_message = "";
-        if (!$registerResult) {
-            $message = "The registration is failed, ";
-        }
-
-
-        return $app['twig']->render('index.twig', array(
-            'form_name' => 'Login to my site',
-            'action_message' => $action_message,
-            'register_name' => $register_name,
-            'register_message' => $register_message,
-            'form' => $this->renderLoginForm($app)->createView(),
-            'form_register' => $this->renderRegister($app)->createView()
+        return $app['twig']->render('register.twig', array(
+            'form_name' => FormMessages::REGISTER_FORM_NAME,
+            'action_message' => FormMessages::REGISTER_MSG_ERROR,
+            'form' => $this->renderRegister($app)->createView()
         ));
     }
     public function register_get(Application $app){
         return $app['twig']->render('register.twig', array(
-            'registerResult' => null,
-            'activationCount' => 6,
-            'action_message' => "",
+            'form_name' => FormMessages::REGISTER_FORM_NAME,
+            'action_message' => FormMessages::REGISTER_MSG,
             'form' => $this->renderRegister($app)->createView()
         ));
     }
@@ -291,12 +418,12 @@ class Account
 
     public function active_get(Application $app){
         return $app['twig']->render('active.twig', array(
-            'activationResult' => false,
-            'activationCount' => 6,
-            'action_message' => "",
+            'form_name' => FormMessages::FORGOTPW_ACTIVATION_FORM_NAME,
+            'action_message' => FormMessages::FORGOTPW_ACTIVATION_MSG_NAME,
             'form' => $this->renderActivation($app)->createView()
         ));
     }
+
     public function active_post(Application $app){
         $session = $app['session'];
         //var_dump($app['request']);
@@ -317,13 +444,13 @@ class Account
                 }
             }
         }
-        return new Response();
-        // TODO what shoud I do here :(
 
     }
 
     public function activeNewpw_get(Application $app){
         return $app['twig']->render('activepwnew.twig', array(
+            'form_name' => FormMessages::FORGOTPW_ACTIVATION_FORM_NAME,
+            'action_message' => FormMessages::FORGOTPW_ACTIVATION_NEWPW_MSG,
             'form' => $this->renderActivePasswordCreation($app)->createView()
         ));
     }
@@ -334,6 +461,7 @@ class Account
         $form->handleRequest($app['request']);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $result = false;
             // $form->getData() holds the submitted values
             // but, the original `$task` variable has also been updated
             $postedData = $form->getData();
@@ -352,7 +480,6 @@ class Account
                 $session->set('loggedUser', $userObject->getExtuid());
                 return $app->redirect($app['url_generator']->generate('login_get'));
             }
-
             $app->redirect($app['url_generator']->generate('login_get'));
         }
         $app->redirect($app['url_generator']->generate('login_get'));
@@ -438,8 +565,7 @@ class Account
 
     public function resetpw_get(Application $app){
         return $app['twig']->render('resetpw.twig', array(
-            'resetCount' => 6,
-            'resetResult' => false,
+            'form_name' => 'Do you want to change your password ?',
             'action_message' => "",
             'form' => $this->renderResetpw($app)->createView()
         ));
@@ -452,6 +578,7 @@ class Account
 
         if ($form->isSubmitted() && $form->isValid()) {
             $postedData = $form->getData();
+            $result = false;
             if(!empty($postedData['oldpassword']) &&
             !empty($postedData['newpassword'] &&
                 ($postedData['newpassword'] === $postedData['newpwconfirm']))
@@ -465,9 +592,8 @@ class Account
         }
 
         return $app['twig']->render('resetpw.twig', array(
-            'resetCount' => 6,
-            'resetResult' => $result,
-            'action_message' => "",
+            'form_name' => 'Do you want to change your password ?',
+            'action_message' => "Action failed. Please try again",
             'form' => $this->renderResetpw($app)->createView()
         ));
     }
@@ -561,13 +687,30 @@ class Account
     }
 
     public function forgotpw_post(Application $app){
+        $session = $app['session'];
+        $session->set('count', 1);
+        $form = $this->renderForgotpw($app);
+        $form->handleRequest($app['request']);
 
+        if ($form->isSubmitted() && $form->isValid()) {
+            $postedData = $form->getData();
+            if(!empty($postedData['ematel'])) {
+                $result = $app['vuba.authn']->forgotpw($postedData['ematel']);
+            }
+            if($result){
+                return $app->redirect($app['url_generator']->generate('active_get'));
+            }
+        }
+
+        return $app['twig']->render('resetpw.twig', array(
+            'form_name' => FormMessages::FORGOTPW_ACTIVATION_FORM_NAME,
+            'action_message' => FormMessages::FORGOTPW_ACTIVATION_MSG_NAME,
+            'form' => $this->renderForgotpw($app)->createView()
+        ));
     }
 
     public function logout(Application $app){
         $app['session']->invalidate();
-        return $app['twig']->render('logout.twig', array(
-            'action_message' => "",
-        ));
+        return $app->redirect($app['url_generator']->generate('login_get'));
     }
 }

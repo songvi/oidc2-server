@@ -1,14 +1,25 @@
 {% extends "base.twig" %}
 
 {% block content %}
-    <div>
-        {% if registerResult %}
-            Congratulation, You've registed successuflly. An email is sent to you for activation code
-            {% else %}
-        <form action="#" method="post" class="form-signin">
-            <h2 class="form-signin-heading">Please enter email address or telephone number</h2>
-            {{ form_widget(form) }}
-        </form>
-        {% endif %}
+    <div class="row justify-content-center">
+        <div class="col-sm-5">
+            <div class="form-box">
+                <div class="form-top">
+                    <div class="form-top-left">
+                        <h3> {{ form_name }}</h3>
+
+                        <p>  {{ action_message }}</p>
+                    </div>
+                    <div class="form-top-right">
+                        <i class="fa fa-pencil"></i>
+                    </div>
+                </div>
+                <div class="form-bottom">
+                    <form role="form" action="" method="post" class="registration-form">
+                        {{ form_widget(form) }}
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}
