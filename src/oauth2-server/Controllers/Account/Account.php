@@ -87,7 +87,7 @@ class Account
         }
 
         $action_message = "User name or password incorrect! Please try again";
-        RenderService::render($app, 'login', 'Login to my site', $action_message, 'index.twig');
+        return RenderService::render($app, 'login', 'Login to my site', $action_message, 'index.twig');
     }
 
 
@@ -224,22 +224,25 @@ class Account
         }
 
         $activationCode = $app['request']->query->get('activation_code');
-        if (!empty($activationCode)){
+        if (!empty($activationCode) && !empty($userId)){
             // Do activation here
             // Verify code and redirect to new password page
 
             // TODO
-            $userObject = $app['vuba.authn']->searchUser(array('activation_code' => $activationCode));
+            $userObject = $app['vuba.authn']->loadUser($userId);
 
             if($userObject instanceof UserObject){
                 if($userObject->getState() == UserFSM::USER_WAIT_FOR_CONFIRMATION){
                     $session->set('activation_code', $activationCode);
-                    return $app->redirect($app['url_generator']->generate('activeNewpw_get'));
+                    $session->set('active_user', $userId);
+                    if ($userObject->getActivationCode() === $activationCode) {
+                        return $app->redirect($app['url_generator']->generate('activeNewpw_get'));
+                    }
+                    else{
+                        //Return to
+                        return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, 'The activation code is not correct!', 'active.twig');
+                    }
                 }
-            }
-            else{
-                //Return to
-                return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, 'The activation code is not correct!', 'active.twig');
             }
         }
         return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, FormMessages::FORGOTPW_ACTIVATION_MSG_NAME, 'active.twig');
@@ -259,10 +262,16 @@ class Account
         $form = RenderService::activate($app);
         $form->handleRequest($app['request']);
 
-        if ($form->isSubmitted() && $form->isValid() && !empty($userId) && $session->get('active_state') === self::ACTIVE_STATE_CODE) {
+        $postedData = $form->getData();
+        $activationCode = $postedData['activation_code'];
+        if ($form->isSubmitted() &&
+            $form->isValid() &&
+            !empty($userId) &&
+            $session->get('active_state') === self::ACTIVE_STATE_CODE &&
+            !empty($activationCode)
+        ) {
             // $form->getData() holds the submitted values
             // but, the original `$task` variable has also been updated
-            $postedData = $form->getData();
 
             $userObject = $app['vuba.authn']->loadUser($userId);
 
@@ -270,7 +279,13 @@ class Account
                 if($userObject->getState() == UserFSM::USER_WAIT_FOR_CONFIRMATION){
                     $session->set('activation_code', $postedData['activation_code']);
                     $session->set('active_state', self::ACTIVE_STATE_PASSWORD);
-                    return $app->redirect($app['url_generator']->generate('activeNewpw_get'));
+                    if ($userObject->getActivationCode() === $activationCode) {
+                        return $app->redirect($app['url_generator']->generate('activeNewpw_get'));
+                    }
+                    else{
+                        //Return to
+                        return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, 'The activation code is not correct!', 'active.twig');
+                    }
                 }
             }
         }
