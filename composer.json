@@ -7,6 +7,7 @@
     "symfony/validator": "^2.",
     "symfony/asset": "^2.",
     "symfony/config": "^2.",
+    "symfony/ldap": "^2.",
     "symfony/security": "^2.",
     "symfony/form": "^2.",
     "vuba/oauth2-server-php": "dev-master",
