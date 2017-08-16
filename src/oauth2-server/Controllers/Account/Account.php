@@ -15,7 +15,6 @@ class Account
     const ACTIVE_USER_TYPE_EMAIL = 'email';
     const ACTIVE_USER_TYPE_TEL = 'tel';
 
-
     // Connects the routes in Silex
     public static function addRoutes($routing)
     {
@@ -147,7 +146,7 @@ class Account
                 $form->get('Avantar')->setData($userData->getProfile());
             if (!empty($userData->getPreferredTheme()))
                 $form->get('Theme')->setData($userData->getPreferredTheme());
-            if (!empty($userData->getBirthdate()->format('d/m/Y')))
+            if (!empty($userData->getBirthdate()))
                 $form->get('BirthDate')->setData($userData->getBirthdate()->format('d/m/Y'));
             if (!empty($userData->getAddress()))
                 $form->get('Address')->setData($userData->getAddress());
@@ -196,6 +195,9 @@ class Account
         return RenderService::render($app, 'register', FormMessages::REGISTER_FORM_NAME, FormMessages::REGISTER_MSG_ERROR, 'edit.twig');
     }
 
+    /**
+     *
+     */
     public function register_get(Application $app){
         return RenderService::render($app, 'register', FormMessages::REGISTER_FORM_NAME, FormMessages::REGISTER_MSG, 'edit.twig');
     }
@@ -236,6 +238,7 @@ class Account
                     $session->set('activation_code', $activationCode);
                     $session->set('active_user', $userId);
                     if ($userObject->getActivationCode() === $activationCode) {
+                        $session->set('active_state', self::ACTIVE_STATE_PASSWORD);
                         return $app->redirect($app['url_generator']->generate('activeNewpw_get'));
                     }
                     else{
@@ -295,6 +298,7 @@ class Account
     public function activeNewpw_get(Application $app){
         return RenderService::render($app, 'activepw', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, FormMessages::FORGOTPW_ACTIVATION_NEWPW_MSG, 'activepwnew.twig');
     }
+
     public function activeNewpw_post(Application $app){
         $session = $app['session'];
         //var_dump($app['request']);
@@ -335,8 +339,9 @@ class Account
     }
 
     public function resetpw_get(Application $app){
-        return RenderService::render($app, 'resetpw', 'Do you want to change your password ?', "Action failed. Please try again", 'resetpw.twig');
+        return RenderService::render($app, 'resetpw', 'Do you want to change your password ?', "", 'resetpw.twig');
     }
+
     public function resetpw_post(Application $app){
         $session = $app['session'];
         //var_dump($app['request']);
@@ -383,7 +388,7 @@ class Account
         }
         // Maybe user has done and in "waitforconfirmation" state
         // Just return to active page
-        return $app->redirect($app['url_generator']->generate('active_get'));
+        return $app->redirect($app['url_generator']->generate('login_get'));
     }
 
     public function logout(Application $app){
