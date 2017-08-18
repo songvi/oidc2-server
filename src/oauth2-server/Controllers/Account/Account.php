@@ -50,10 +50,9 @@ class Account
 
         return RenderService::render($app, 'login', 'Login to my site', $action_message, 'index.twig');
     }
+
     public function login_post(Application $app){
-
         $session = $app['session'];
-
         if($session->get('loggedUser')){
             return $app->redirect($app['url_generator']->generate('login_get'));
         }
@@ -186,9 +185,9 @@ class Account
                 $registerResult = $app['vuba.authn']->register($postedData['ematel']);
 
                 if ($registerResult) {
-                    $session = $app['session'];
-                    $session->set('active_user', $postedData['ematel']);
-                    return $app->redirect($app['url_generator']->generate('active_get'));
+                    //$session = $app['session'];
+                    //$session->set('active_user', $postedData['ematel']);
+                    return $app->redirect($app['url_generator']->generate('active_get', array('active_user' => $postedData['ematel'])));
                 }
             }
         }
@@ -204,44 +203,27 @@ class Account
 
     public function active_get(Application $app){
         $session = $app['session'];
-        $session->set('active_state', self::ACTIVE_STATE_INIT);
+        //$session->set('active_state', self::ACTIVE_STATE_INIT);
 
         // Try to search user id in POST, GET, or SESSION
         $userId = $app['request']->query->get('active_user');
         if (empty($userId)){
             $userId = $app['request']->request->get('active_user');
         }
-        if (empty($userId)) {
-            $userId = $session->get('active_user');
-        }
 
-        if(!empty($userId) && empty($session->get('loggedUser'))){
-            $session->set('active_state', self::ACTIVE_STATE_CODE);
-            $session->set('active_user', $userId);
-        }else{
-            // Return to login page
-            $action_message = "The request to activation page is incorrect.";
-            return RenderService::render($app, 'login', 'Login to my site', $action_message, 'index.twig');
-
-        }
-
+        // This case, user click on the link in email to go to activation page.
         $activationCode = $app['request']->query->get('activation_code');
         if (!empty($activationCode) && !empty($userId)){
             // Do activation here
             // Verify code and redirect to new password page
-
             // TODO
             $userObject = $app['vuba.authn']->loadUser($userId);
-
             if($userObject instanceof UserObject){
                 if($userObject->getState() == UserFSM::USER_WAIT_FOR_CONFIRMATION){
-                    $session->set('activation_code', $activationCode);
-                    $session->set('active_user', $userId);
                     if ($userObject->getActivationCode() === $activationCode) {
-                        $session->set('active_state', self::ACTIVE_STATE_PASSWORD);
-                        return $app->redirect($app['url_generator']->generate('activeNewpw_get'));
+                        return $app->redirect($app['url_generator']->generate('activeNewpw_get', array('active_user' => $userId, 'activation_code' => $activationCode)));
                     }
-                    else{
+                    else {
                         //Return to
                         return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, 'The activation code is not correct!', 'active.twig');
                     }
@@ -258,19 +240,18 @@ class Account
         if (empty($userId)){
             $userId = $app['request']->request->get('active_user');
         }
-        if (empty($userId)) {
-            $userId = $session->get('active_user');
-        }
 
         $form = RenderService::activate($app);
         $form->handleRequest($app['request']);
 
         $postedData = $form->getData();
         $activationCode = $postedData['activation_code'];
+        if(empty($activationCode)){
+            $activationCode = $app['request']->query->get('activation_code');
+        }
         if ($form->isSubmitted() &&
             $form->isValid() &&
             !empty($userId) &&
-            $session->get('active_state') === self::ACTIVE_STATE_CODE &&
             !empty($activationCode)
         ) {
             // $form->getData() holds the submitted values
@@ -280,10 +261,8 @@ class Account
 
             if($userObject instanceof UserObject){
                 if($userObject->getState() == UserFSM::USER_WAIT_FOR_CONFIRMATION){
-                    $session->set('activation_code', $postedData['activation_code']);
-                    $session->set('active_state', self::ACTIVE_STATE_PASSWORD);
                     if ($userObject->getActivationCode() === $activationCode) {
-                        return $app->redirect($app['url_generator']->generate('activeNewpw_get'));
+                        return $app->redirect($app['url_generator']->generate('activeNewpw_get', array('active_user' => $userId, 'activation_code' => $activationCode)));
                     }
                     else{
                         //Return to
@@ -306,19 +285,20 @@ class Account
         if (empty($userId)){
             $userId = $app['request']->request->get('active_user');
         }
-        if (empty($userId)) {
-            $userId = $session->get('active_user');
+
+        $activationCode = $app['request']->query->get('activation_code');
+        if (empty($activationCode)){
+            $activationCode = $app['request']->request->get('activation_code');
         }
 
         $form = RenderService::activatePassword($app);
         $form->handleRequest($app['request']);
 
-        if ($form->isSubmitted() && $form->isValid() && !empty($userId) && $session->get('active_state') === self::ACTIVE_STATE_PASSWORD) {
+        if ($form->isSubmitted() && $form->isValid() && !empty($userId)) {
             $result = false;
             // $form->getData() holds the submitted values
             // but, the original `$task` variable has also been updated
             $postedData = $form->getData();
-            $activationCode = $session->get('activation_code');
             if(!empty($activationCode)) {
                 $userObject = $app['vuba.authn']->loadUser($userId);
                 if(($userObject instanceof UserObject) &&
