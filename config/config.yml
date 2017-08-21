@@ -42,3 +42,9 @@ authentication:
      binduser: "cn=admin,dc=example,dc=org"
      bindpassword: P@ssw0rd
      basedn: "ou=people,dc=example,dc=org"
+service:
+  log:
+  - name: logger
+    type: text
+    config:
+     path: /var/www/github.com/iodc2-server/var/app.log

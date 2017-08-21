@@ -1,0 +1,30 @@
+# general
+msg0001: UNseeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeet
+msg0000: Action failed
+#login
+msg000: Login to mysiteeeee
+msg001: User %uid% has logged successfuly
+msg002: User %uid% does not exist
+msg003: User %uid% could not log in, credential invalid
+msg004: Action could not be done for user %uid%
+
+#edit
+msg010: Edit info
+msg011: Modified data is saved
+msg012: Could not save, please try again
+
+#confirmation
+msg0202: Activate your account
+msg0201: Activation key invalid
+
+#forgot password
+msg0301: Password recovery
+msg0302: Just enter email or telephone number for activation code
+
+#reset password
+msg0401: Do you want to change password ?
+msg0402: Could not change your password. Please try again
+
+# registration
+msg0501: Sign up for free
+msg0502: There is an error in registration process, please try again later

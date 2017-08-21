@@ -1,0 +1,5 @@
+#login
+msg001: User %uid% has logged successfuly
+msg002: User %uid% n'existe pas
+msg003: User %uid% could not log in, credential invalid
+msg004: Action could not be done for user %uid%

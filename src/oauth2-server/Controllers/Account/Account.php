@@ -4,6 +4,10 @@ namespace Vuba\OIDC\Controllers\Account;
 
 use Silex\Application;
 use Symfony\Component\Config\Util;
+use Vuba\AuthN\Exception\ActionNotAllowOnStateException;
+use Vuba\AuthN\Exception\ActivationKeyInvalidException;
+use Vuba\AuthN\Exception\LoginFailedException;
+use Vuba\AuthN\Exception\UserNotFoundException;
 use Vuba\AuthN\User\UserFSM;
 use Vuba\AuthN\User\UserObject;
 
@@ -39,7 +43,7 @@ class Account
     {
         // TODO return server info
         // Return account page
-        $action_message = "hi, this is form message";
+        $action_message = "";
         $session = $app['session'];
 
         if(!empty($session->get('loggedUser'))){
@@ -48,10 +52,15 @@ class Account
                 'loggedUser' => $app['session']->get('loggedUser')));
         }
 
-        return RenderService::render($app, 'login', 'Login to my site', $action_message, 'index.twig');
+        return RenderService::render($app, 'login', $app['translator']->trans('msg000'), $action_message, 'index.twig');
     }
 
+    /**
+     *
+     */
     public function login_post(Application $app){
+        $action_message = "";
+
         $session = $app['session'];
         if($session->get('loggedUser')){
             return $app->redirect($app['url_generator']->generate('login_get'));
@@ -71,7 +80,21 @@ class Account
                 !empty($postedData['ematel']) &&
                 isset($postedData['password'])&&
                 !empty($postedData['password'])) {
-                $loginResult = $app['vuba.authn']->login($postedData['ematel'], $postedData['password']);
+                try {
+                    $loginResult = $app['vuba.authn']->login($postedData['ematel'], $postedData['password'], array(), $app['monolog']);
+                }
+                catch(UserNotFoundException $e){
+                    $app['monolog']->warning(sprintf('User %s not found', $postedData['ematel']));
+                    $action_message = $app['translator']->trans('msg002', array('%uid%'=> $postedData['ematel']));
+                }
+                catch(LoginFailedException $e){
+                    $app['monolog']->warning(sprintf('User %s logs failed', $postedData['ematel']));
+                    $action_message = $app['translator']->trans('msg003', array('%uid%' => $postedData['ematel']));
+                }
+                catch(ActionNotAllowOnStateException $e){
+                    $app['monolog']->warning(sprintf('User %s could not log in', $postedData['ematel']));
+                    $action_message = $app['translator']->trans('msg004', array('%uid%' => $postedData['ematel']));
+                }
             }
 
             if($loginResult){
@@ -79,13 +102,13 @@ class Account
                 $session->set('loggedUser', $postedData['ematel']);
                 $session->save();
                 return $app['twig']->render('welcome.twig', array(
-                    'action_message' => "",
+                    'action_message' => $app['translator']->trans('msg001', array('%uid%'=>$postedData['ematel'])),
                     'loggedUser' => $app['session']->get('loggedUser')));
             }
         }
 
-        $action_message = "User name or password incorrect! Please try again";
-        return RenderService::render($app, 'login', 'Login to my site', $action_message, 'index.twig');
+        //$action_message = "User name or password incorrect! Please try again";
+        return RenderService::render($app, 'login', $app['translator']->trans('msg000'), $action_message, 'index.twig');
     }
 
 
@@ -115,23 +138,23 @@ class Account
             $kv['preferred_lang'] = $postedData['Language'];
             $kv['locale'] = $postedData['Locale'];
 
-            $result = $app['vuba.authn']->modify($session->get('loggedUser'), $kv);
+            $result = $app['vuba.authn']->modify($session->get('loggedUser'), $kv, array(), $app['monolog']);
 
             if($result){
-                $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
+                $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'), array(), $app['monolog']);
                 $form = RenderService::editForm($app);
                 $this->fillForm($form, $userData);
-                return RenderService::renderForm($app, $form, 'Modify your personal info', 'Action done!', 'edit.twig');
+                return RenderService::renderForm($app, $form, $app['translator']->trans('msg010'), $app['translator']->trans('msg011'), 'edit.twig');
             }
 
         }
 
         $session = $app['session'];
         if($session->get('loggedUser')) {
-            $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
+            $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'), array(), $app['monolog']);
             $form = RenderService::editForm($app);
             $this->fillForm($form, $userData);
-            return RenderService::renderForm($app, $form, 'Modify your personal info', 'Action failed, please try again!', 'edit.twig');
+            return RenderService::renderForm($app, $form, $app['translator']->trans('msg010'), $app['translator']->trans('msg012'), 'edit.twig');
         }
     }
 
@@ -159,10 +182,10 @@ class Account
     public function edit_get(Application $app){
         $session = $app['session'];
         if($session->get('loggedUser')) {
-            $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'));
+            $userData = $app['vuba.authn']->loadUser($session->get('loggedUser'), array(), $app['monolog']);
             $form =RenderService::editForm($app);
             $this->fillForm($form, $userData);
-            return RenderService::renderForm($app, $form, 'Modify your personal info', '', 'edit.twig');
+            return RenderService::renderForm($app, $form, $app['translator']->trans('msg010'), '', 'edit.twig');
         }
         $returnUrl = $app['url_generator']->generate('login_get');
         return $app->redirect($returnUrl);
@@ -182,7 +205,7 @@ class Account
 
             if(!empty($postedData) && isset($postedData['ematel']))
             {
-                $registerResult = $app['vuba.authn']->register($postedData['ematel']);
+                $registerResult = $app['vuba.authn']->register($postedData['ematel'], array(), $app['monolog']);
 
                 if ($registerResult) {
                     //$session = $app['session'];
@@ -191,14 +214,14 @@ class Account
                 }
             }
         }
-        return RenderService::render($app, 'register', FormMessages::REGISTER_FORM_NAME, FormMessages::REGISTER_MSG_ERROR, 'edit.twig');
+        return RenderService::render($app, 'register', $app['translator']->trans('msg0501'), $app['translator']->trans('msg0502'), 'edit.twig');
     }
 
     /**
      *
      */
     public function register_get(Application $app){
-        return RenderService::render($app, 'register', FormMessages::REGISTER_FORM_NAME, FormMessages::REGISTER_MSG, 'edit.twig');
+        return RenderService::render($app, 'register', $app['translator']->trans('msg0501'), "", 'edit.twig');
     }
 
     public function active_get(Application $app){
@@ -217,20 +240,20 @@ class Account
             // Do activation here
             // Verify code and redirect to new password page
             // TODO
-            $userObject = $app['vuba.authn']->loadUser($userId);
+            $userObject = $app['vuba.authn']->loadUser($userId, array(), $app['monolog']);
             if($userObject instanceof UserObject){
-                if($userObject->getState() == UserFSM::USER_WAIT_FOR_CONFIRMATION){
+                if($userObject->getState() == UserFSM::USER_WAIT_FOR_CONFIRMATION || $userObject->getState() == UserFSM::USER_STATE_NORMAL){
                     if ($userObject->getActivationCode() === $activationCode) {
-                        return $app->redirect($app['url_generator']->generate('activeNewpw_get', array('active_user' => $userId, 'activation_code' => $activationCode)));
+                        return $app->redirect($app['url_generator']->generate('activeNewpw_get', array('active_user' => $app->escape($userId), 'activation_code' => $app->escape($activationCode))));
                     }
                     else {
                         //Return to
-                        return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, 'The activation code is not correct!', 'active.twig');
+                        return RenderService::render($app, 'active', $app['translator']->trans('msg0202'), $app['translator']->trans('msg0201'), 'active.twig');
                     }
                 }
             }
         }
-        return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, FormMessages::FORGOTPW_ACTIVATION_MSG_NAME, 'active.twig');
+        return RenderService::render($app, 'active', $app['translator']->trans('msg0001'), $app['translator']->trans('msg0001'), 'active.twig');
     }
 
     public function active_post(Application $app){
@@ -254,28 +277,25 @@ class Account
             !empty($userId) &&
             !empty($activationCode)
         ) {
-            // $form->getData() holds the submitted values
-            // but, the original `$task` variable has also been updated
-
-            $userObject = $app['vuba.authn']->loadUser($userId);
+            $userObject = $app['vuba.authn']->loadUser($userId, array(), $app['monolog']);
 
             if($userObject instanceof UserObject){
-                if($userObject->getState() == UserFSM::USER_WAIT_FOR_CONFIRMATION){
+                if($userObject->getState() == UserFSM::USER_STATE_NORMAL){
                     if ($userObject->getActivationCode() === $activationCode) {
-                        return $app->redirect($app['url_generator']->generate('activeNewpw_get', array('active_user' => $userId, 'activation_code' => $activationCode)));
+                        return $app->redirect($app['url_generator']->generate('activeNewpw_get', array('active_user' => $app->escape($userId), 'activation_code' => $app->escape($activationCode))));
                     }
                     else{
                         //Return to
-                        return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, 'The activation code is not correct!', 'active.twig');
+                        return RenderService::render($app, 'active', $app['translator']->trans('msg0001'), $app['translator']->trans('msg0201'), 'active.twig');
                     }
                 }
             }
         }
-        return RenderService::render($app, 'active', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, FormMessages::FORGOTPW_ACTIVATION_MSG_NAME, 'active.twig');
+        return RenderService::render($app, 'active', $app['translator']->trans('msg0001'), $app['translator']->trans('msg0001'), 'active.twig');
     }
 
     public function activeNewpw_get(Application $app){
-        return RenderService::render($app, 'activepw', FormMessages::FORGOTPW_ACTIVATION_FORM_NAME, FormMessages::FORGOTPW_ACTIVATION_NEWPW_MSG, 'activepwnew.twig');
+        return RenderService::render($app, 'activepw', $app['translator']->trans('msg0001'), $app['translator']->trans('msg0001'), 'activepwnew.twig');
     }
 
     public function activeNewpw_post(Application $app){
@@ -300,11 +320,19 @@ class Account
             // but, the original `$task` variable has also been updated
             $postedData = $form->getData();
             if(!empty($activationCode)) {
-                $userObject = $app['vuba.authn']->loadUser($userId);
+                $userObject = $app['vuba.authn']->loadUser($userId, array(), $app['monolog']);
                 if(($userObject instanceof UserObject) &&
                     ($postedData['newpassword'] === $postedData['newpasswordconfirmation']))
                 {
-                    $result = $app['vuba.authn']->confirm($userObject->getExtuid(), $postedData['newpassword'],$activationCode);
+                    try {
+                        $result = $app['vuba.authn']->confirmForgotPw($userObject->getExtuid(), $postedData['newpassword'], $activationCode, array(), $app['monolog']);
+                    }
+                    catch(ActionNotAllowOnStateException $e){
+                        return $app->redirect($app['url_generator']->generate('login_get'));
+                    }
+                    catch(ActivationKeyInvalidException $e){
+
+                    }
                 }
             }
 
@@ -319,7 +347,7 @@ class Account
     }
 
     public function resetpw_get(Application $app){
-        return RenderService::render($app, 'resetpw', 'Do you want to change your password ?', "", 'resetpw.twig');
+        return RenderService::render($app, 'resetpw', $app['translator']->trans('msg0401'), "", 'resetpw.twig');
     }
 
     public function resetpw_post(Application $app){
@@ -335,7 +363,7 @@ class Account
             !empty($postedData['newpassword'] &&
                 ($postedData['newpassword'] === $postedData['newpwconfirm']))
             )
-             $result = $app['vuba.authn']->resetpw($session->get('loggedUser'), $postedData['oldpassword'], $postedData['newpwconfirm']);
+             $result = $app['vuba.authn']->resetpw($session->get('loggedUser'), $postedData['oldpassword'], $postedData['newpwconfirm'], array(), $app['monolog']);
 
             if($result){
                 return $app->redirect($app['url_generator']->generate('login_get'));
@@ -343,11 +371,11 @@ class Account
             $app->redirect($app['url_generator']->generate('resetpw_post'));
         }
 
-        return RenderService::render($app, 'resetpw', 'Do you want to change your password ?', "Action failed. Please try again", 'resetpw.twig');
+        return RenderService::render($app, 'resetpw', $app['translator']->trans('msg0401'), $app['translator']->trans('msg0402'), 'resetpw.twig');
     }
 
     public function forgotpw_get(Application $app){
-        return RenderService::render($app, 'forgotpw', 'You don\'t remember your password ?', "Just enter email or telephone number for activation code", 'forgotpw.twig');
+        return RenderService::render($app, 'forgotpw', $app['translator']->trans('msg0301'), $app['translator']->trans('msg0302'), 'forgotpw.twig');
     }
 
     public function forgotpw_post(Application $app){
@@ -360,10 +388,10 @@ class Account
             $postedData = $form->getData();
             if(!empty($postedData['ematel'])) {
                 $session->set('active_user', $postedData['ematel']);
-                $result = $app['vuba.authn']->forgotpw($postedData['ematel']);
+                $result = $app['vuba.authn']->forgotpw($postedData['ematel'], array(), $app['monolog']);
             }
             if($result){
-                return $app->redirect($app['url_generator']->generate('active_get'));
+                return $app->redirect($app['url_generator']->generate('active_get', array('active_user' => $postedData['ematel'])));
             }
         }
         // Maybe user has done and in "waitforconfirmation" state
