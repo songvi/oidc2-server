@@ -69,6 +69,7 @@ class Oauth2Controller implements  ControllerProviderInterface
         Token::addRoutes($routing);
         Resource::addRoutes($routing);
         Introspect::addRoutes($routing);
+        UserInfo::addRoutes($routing);
 
         return $routing;
     }

@@ -34,7 +34,17 @@ class VuBaUserCredential implements  UserCredentialsInterface{
      */
     public function getUserDetails($username)
     {
+        // TODO
+        // uid vs uuid ?!!
+        //
         $user =  $this->authn->loadUser($username, $this->context, $this->logger);
-        return array('user_id' => $user->getUuid());
+        return array('user_id' => $user->getUuid(),
+            'sub' => $user->getSub(),
+            'name' => $user->getName(),
+            'given_name' => $user->getGivenName(),
+            'family_name' => $user->getFamilyName(),
+            'locale' => $user->getLocale(),
+            'updated_at' => $user->getUpdatedAt(),
+            'scope' => 'openid email profile');
     }
 }
