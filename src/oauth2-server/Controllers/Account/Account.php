@@ -101,6 +101,13 @@ class Account
                 $session->invalidate();
                 $session->set('loggedUser', $postedData['ematel']);
                 $session->save();
+
+                if (!empty($app['request']->query->get('authzcallback'))){
+                    // TODO call back to authorize
+                    /**/
+                    return $app->redirect(base64_decode(($app['request']->query->get('authzcallback'))));
+                }
+
                 return $app['twig']->render('welcome.twig', array(
                     'action_message' => $app['translator']->trans('msg001', array('%uid%'=>$postedData['ematel'])),
                     'loggedUser' => $app['session']->get('loggedUser')));

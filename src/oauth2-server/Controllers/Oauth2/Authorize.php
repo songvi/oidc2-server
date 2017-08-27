@@ -31,10 +31,22 @@ class Authorize
         }
 
         // display the "do you want to authorize?" form
+        /*
         return $app['twig']->render('server/authorize.twig', array(
             'client_id' => $app['request']->query->get('client_id'),
             'response_type' => $app['request']->query->get('response_type')
-        ));
+        ));*/
+
+        $session = $app['session'];
+        $user = $session->get('loggedUser');
+        if (!empty($user)){
+            return $server->handleAuthorizeRequest($app['request'], $response, true);
+        }
+        // redirect to /account/
+        // TODO
+        return $app->redirect($app['url_generator']->generate('login_get', array(
+            'authzcallback' => base64_encode($app['request']->getRequestUri())
+        )));
     }
 
     /**
